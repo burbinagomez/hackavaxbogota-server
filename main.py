@@ -102,9 +102,14 @@ def verify_message():
             },{
                 "$set": {"validated": True}
             })
-    return make_response({
-        "message": "Transaccion correcta"
-    },200)
+        
+        return make_response({
+            "message": f"Tiene {len(response)} facturas asociadas, se debitaron {len(response)} tokens a su cuenta, puede validar en https://testnet.avascan.info/blockchain/c/tx/{tx_receipt.transactionHash.hex()}"
+        },200)
+    else:
+        return make_response({
+            "message": "No hay facturas validadas "
+        },200)
 
 
 @app.route("/items", methods=["GET"])
