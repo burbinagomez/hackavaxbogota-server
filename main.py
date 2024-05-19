@@ -5,6 +5,7 @@ from eth_account import Account
 from hexbytes import HexBytes
 from dotenv import load_dotenv
 from web3.middleware import geth_poa_middleware
+from flask_cors import CORS 
 import pymongo
 import json
 import os
@@ -13,6 +14,7 @@ load_dotenv()
 f = open('abi.json')
 abi = json.load(f)
 app = Flask(__name__)
+CORS(app)
 w3 = Web3(Web3.HTTPProvider(os.getenv("HTTP_PROVIDER")))
 mongo_client = pymongo.MongoClient(f"mongodb+srv://{os.getenv('USER_MONGO')}:{os.getenv('PWD_MONGO')}@{os.getenv('MONGO_URL')}/?retryWrites=true&w=majority&appName=Cluster0")
 nuez_contract = w3.eth.contract(os.getenv("CONTRACT_ADDRESS"), abi=abi)
