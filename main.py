@@ -12,7 +12,7 @@ load_dotenv()
 
 app = Flask(__name__)
 w3 = Web3(Web3.HTTPProvider(os.getenv("HTTP_PROVIDER")))
-mongo_client = pymongo.MongoClient(f"mongodb+srv://{os.getenv('USER_MONGO')}:{os.getenv('PWD_MONGO')}@{os.getenv('MONGO_URL')}/?retryWrites=true&w=majority&appName=Cluster0")
+mongo_client = pymongo.MongoClient(f"mongodb+srv://{os.getenv('USER_MONGO')}:{os.getenv('PWD_MONGO')}@{os.getenv('MONGO_URL')}/?retryWrites=true&w=majority&appName=Cluster0",tls=False)
 
 @app.route("/create/wallet", methods=["POST"])
 def create_wallet():
