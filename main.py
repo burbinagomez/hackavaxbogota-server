@@ -63,6 +63,19 @@ def sign_message():
         "message": "Transaccion correcta"
     },200)
 
+@app.route("/balance", methods=["POST"])
+def get_balance():
+    data = request.json
+    mydb = mongo_client["nuez"]
+    col_user = mydb["user"]
+    user = col_user.find_one({
+        "phonenumber": data["number"]
+    })
+    balance = nuez_contract.functions.balanceOf(user["public_key"]).call()
+    return make_response({
+        "balance": balance/1000000000000000000
+    },200)
+
 @app.route("/verify", methods=["POST"])
 def verify_message():
     data = request.json
@@ -81,7 +94,7 @@ def verify_message():
         response.append(message)
     amount = len(response)
     if amount != 0:
-        transaction = nuez_contract.functions.transfer(user["public_key"], amount+1000000000000000000).build_transaction({
+        transaction = nuez_contract.functions.transfer(user["public_key"], amount*1000000000000000000).build_transaction({
             'chainId': 43113,  # ID de la cadena Avalanche (C-Chain)
             'gas': 8000000,  # Gas límite para la transacción (ajusta según tus necesidades)
             'gasPrice': w3.to_wei('50', 'gwei'),  # Precio del gas (en gwei)
