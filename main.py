@@ -4,15 +4,19 @@ from eth_account.messages import encode_defunct, _hash_eip191_message
 from eth_account import Account
 from hexbytes import HexBytes
 from dotenv import load_dotenv
-from bson import ObjectId
+from web3.middleware import geth_poa_middleware
 import pymongo
+import json
 import os
 
 load_dotenv()
-
+f = open('abi.json')
+abi = json.load(f)
 app = Flask(__name__)
 w3 = Web3(Web3.HTTPProvider(os.getenv("HTTP_PROVIDER")))
-mongo_client = pymongo.MongoClient(f"mongodb+srv://{os.getenv('USER_MONGO')}:{os.getenv('PWD_MONGO')}@{os.getenv('MONGO_URL')}/?retryWrites=true&w=majority&appName=Cluster0",tls=False)
+mongo_client = pymongo.MongoClient(f"mongodb+srv://{os.getenv('USER_MONGO')}:{os.getenv('PWD_MONGO')}@{os.getenv('MONGO_URL')}/?retryWrites=true&w=majority&appName=Cluster0")
+nuez_contract = w3.eth.contract(os.getenv("CONTRACT_ADDRESS"), abi=abi)
+w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 @app.route("/create/wallet", methods=["POST"])
 def create_wallet():
@@ -63,26 +67,35 @@ def verify_message():
     })
     mycol = mydb["messages"]
     messages = mycol.find({
-        "phonenumber": data["number"]
+        "phonenumber": data["number"],
+        "validated":  {"$exists": False} 
     })
+    response = []
     for message in messages:
-        _message = encode_defunct(text=message["message"])
-        signed_message = message["hash"]
-        hb = HexBytes(signed_message)
-        validated = w3.eth.account.recover_message(_message, signature=hb.hex())
-        if not message.get("validated"):
-            if validated == user["public_key"]:
-                mycol.update_one({
-                    "_id": message["_id"]
-                },{
-                    {"$set": {"validated": True}}
-                })
-            else:
-                mycol.update_one({
-                    "_id": message["_id"]
-                },{
-                    {"$set": {"malformated": True}}
-                })
+        response.append(message)
+    amount = len(response)
+    if amount != 0:
+        transaction = nuez_contract.functions.transfer(user["public_key"], amount+1000000000000000000).build_transaction({
+            'chainId': 43113,  # ID de la cadena Avalanche (C-Chain)
+            'gas': 8000000,  # Gas límite para la transacción (ajusta según tus necesidades)
+            'gasPrice': w3.to_wei('50', 'gwei'),  # Precio del gas (en gwei)
+            'nonce': w3.eth.get_transaction_count(os.getenv("OWNER_ADDRESS")),
+        })
+        signed_txn = w3.eth.account.sign_transaction(transaction, private_key=os.getenv("PRIVATE_KEY"))
+        # Enviar la transacción firmada
+        tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+
+        # Esperar a que se confirme la transacción
+        tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+        print("Transferencia exitosa. Hash de la transacción:", tx_receipt.transactionHash.hex())
+    if len(response) > 0:
+        mycol.update_many({
+                "phonenumber": data["number"],
+                "validated": {"$exists": False} 
+            },{
+                "$set": {"validated": True}
+            })
     return make_response({
         "message": "Transaccion correcta"
     },200)
