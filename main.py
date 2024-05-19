@@ -26,11 +26,17 @@ def create_wallet():
     mydb = mongo_client["nuez"]
     mycol = mydb["user"]
     wallet_address = acc.address
-    mycol.insert_one({
-        "private_key": private_key,
-        "public_key": wallet_address,
+    user = mycol.find_one({
         "phonenumber": data["number"]
     })
+    if not user:
+        mycol.insert_one({
+            "private_key": private_key,
+            "public_key": wallet_address,
+            "phonenumber": data["number"]
+        })
+    else:
+        wallet_address = user["public_key"]
     return make_response({
         "message": "Transaccion correcta",
         "data": wallet_address
