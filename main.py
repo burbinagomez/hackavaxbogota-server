@@ -101,4 +101,4 @@ def get_items():
         "data": response
     },200)
     
-app.run(debug = True)
+app.run("0.0.0.0",debug = True)
